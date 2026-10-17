@@ -1,0 +1,1188 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Trần Trung Hiếu | SQL Sales Analysis</title><style>*{box-sizing:border-box}body{margin:0;background:#f4f3ef;color:#202a32;font:16px/1.65 system-ui,-apple-system,sans-serif}header{background:#14232b;color:#f4f3ef;padding:64px max(6vw,24px)}main{max-width:1200px;margin:auto;padding:24px}h1{font-size:clamp(30px,5vw,58px);line-height:1.12;margin:14px 0 22px}h2{font-size:27px;margin:10px 0}h3{margin:4px 0 10px}.label{font-size:12px;letter-spacing:2px;color:#9a7834;font-weight:700}header .label{color:#dbc58e}.intro{max-width:820px;color:#d1d9da}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:16px;margin-top:28px}.metric{border-top:1px solid #718287;padding-top:16px}.metric strong{display:block;font-size:27px;color:#eddaab}.metric small{color:#d1d9da}section{background:#fff;padding:30px;margin:22px 0;border:1px solid #e2e4df;border-radius:12px}.note{background:#f7f1e3;padding:14px;border-left:3px solid #aa884b}.muted{font-size:13px;color:#66737c}.scroll{overflow-x:auto;margin-top:18px}table{border-collapse:collapse;width:100%;font-size:13px;text-align:left}th{background:#edf1f1;color:#30474f}td,th{padding:10px;border-bottom:1px solid #e4e8e7;white-space:nowrap}pre{background:#14232b;color:#e2e9eb;padding:20px;overflow:auto;font-size:13px;line-height:1.6}summary{cursor:pointer;font-weight:600;color:#725c2e}a{color:#876624}nav{display:flex;gap:12px;flex-wrap:wrap}nav a{text-decoration:none;padding:6px 10px;border:1px solid #d8ddd9;border-radius:5px}.insight{padding:20px 0;border-bottom:1px solid #e4e8e7}.insight:last-child{border:0}footer{text-align:center;padding:30px;color:#66737c}@media print{body{background:white}section{break-inside:avoid}details{display:none}header{padding:25px}a{color:inherit}}</style><header><span class="label">TRẦN TRUNG HIẾU / DATA ANALYST PORTFOLIO</span><h1>Phân tích kinh doanh<br>bán hàng đa sàn bằng SQL</h1><p class="intro">Quý I/2026 · SQLite · Dữ liệu mô phỏng phục vụ học tập. Từ dữ liệu đã làm sạch đến doanh thu, đối soát thanh toán, kiểm kê và hiệu quả vận hành.</p><div class="metrics"><div class="metric"><strong>6.000</strong><small>Đơn hàng sạch</small></div><div class="metric"><strong>4,884 tỷ VND</strong><small>Doanh thu thuần Q1</small></div><div class="metric"><strong>1,638 tỷ VND</strong><small>Chi phí quảng cáo Q1</small></div><div class="metric"><strong>12</strong><small>Truy vấn phân tích</small></div></div></header><main><section><h2>Mục tiêu và phạm vi</h2><p>Đánh giá doanh thu và biên đóng góp; xác định ngoại lệ tài chính, tồn kho và vận hành cần điều tra. Phân tích 11 bảng từ Excel, Google Sheets và API mô phỏng. Python phục vụ thu thập và làm sạch; SQLite phục vụ truy vấn và tổng hợp.</p><p class="note">Kết quả này được tính trực tiếp từ bộ dữ liệu gốc bạn cung cấp, với bước chuẩn hóa và loại dòng trùng hoàn toàn được dựng lại để kiểm chứng. Chưa đọc được company.db trên máy Mac của bạn; cần chạy lại các tệp SQL trên cơ sở dữ liệu đó trước khi công bố kết quả của chính bài làm.</p><p>Kỹ thuật: JOIN, CTE, CASE WHEN, GROUP BY, LEFT JOIN, LAG, DENSE_RANK, cửa sổ SUM, lịch ngày đệ quy, index và view. Trọng tâm là giữ đúng cấp độ dữ liệu và không nhân đôi chi phí khi ghép bảng.</p><nav><a href="#01_overview">01 Tổng quan hoạt động</a><a href="#02_monthly_sales">02 Doanh thu và đóng góp theo tháng</a><a href="#03_monthly_growth">03 Tăng trưởng doanh thu</a><a href="#04_product_ranking">04 Sản phẩm tạo lãi gộp</a><a href="#05_payment_reconciliation">05 Đối soát thanh toán</a><a href="#06_payment_exceptions">06 Danh sách cần xác minh</a><a href="#07_stock_reconciliation">07 Đối soát tồn kho</a><a href="#08_daily_stock">08 Tồn cuối ngày liên tục</a><a href="#09_warehouse_productivity">09 Năng suất kho</a><a href="#10_video_ads">10 Hiệu quả quảng cáo video</a><a href="#11_monthly_contribution">11 Đóng góp sau Ads và nội dung</a><a href="#12_quality_checks">12 Kiểm tra tính toàn vẹn</a></nav></section><section><span class="label">EXECUTIVE FINDINGS</span><h2>Nhận xét và hành động đề xuất</h2><article class="insight"><h3>Doanh thu giảm qua từng tháng</h3><p>Doanh thu thuần tháng 1 là 1.808.124.000 VND; tháng 2 là 1.638.189.000 VND (−9,40%); tháng 3 là 1.437.588.000 VND (−12,25%).</p><p><b>Đề xuất: </b>Kiểm tra thay đổi số đơn hoàn thành, AOV và cơ cấu SKU theo kênh trước khi xác định nguyên nhân. Chưa đủ dữ liệu để kết luận do mùa vụ hay cắt Ads.</p></article><article class="insight"><h3>Chi phí Ads và nội dung vượt đóng góp trong hai tháng đầu</h3><p>Đóng góp sau Ads và nội dung tháng 1 là −547.192.880 VND; tháng 2 là −556.172.680 VND; tháng 3 là +164.406.440 VND. Tổng quý là −938.959.120 VND.</p><p><b>Đề xuất: </b>Rà soát ngân sách theo video và biên đóng góp. Đây chưa phải lợi nhuận ròng; chưa có toàn bộ OPEX. Không suy ra việc giảm Ads gây tăng đóng góp chỉ từ tương quan theo tháng.</p></article><article class="insight"><h3>TikTok Shop có tỷ lệ hủy và hoàn cao nhất trong ba kênh</h3><p>Tỷ lệ hủy 8,95%, tỷ lệ hoàn 9,05%; mẫu số đều là 2.001 đơn TikTok Shop.</p><p><b>Đề xuất: </b>Ưu tiên kiểm tra lý do hủy/hoàn theo SKU, shop và đơn vị vận chuyển. Bộ dữ liệu hiện chưa có lý do chi tiết để quy trách nhiệm.</p></article><article class="insight"><h3>62 giao dịch thanh toán có chênh lệch</h3><p>Thực nhận cao hơn dự kiến tổng cộng 310.000 VND; Shopee 120.000, Lazada 120.000, TikTok Shop 70.000. Trong bộ mô phỏng này không có khoản thiếu.</p><p><b>Đề xuất: </b>Lập danh sách giao dịch để xác minh điều chỉnh phí, ưu đãi hoặc thời điểm quyết toán. Chưa ghi nhận chênh lệch là doanh thu bổ sung khi chưa có chứng từ.</p></article><article class="insight"><h3>65 cặp SKU–kho lệch kiểm kê</h3><p>Trong 2.400 cặp SKU–kho, 2.335 khớp và 65 lệch (2,71%). Tồn sổ cuối quý là 184.188 sản phẩm.</p><p><b>Đề xuất: </b>Kiểm đếm lại các cặp có chênh lệch tuyệt đối hoặc giá trị lớn nhất; kiểm tra chứng từ nhập, xuất và hoàn. Không ghi đè tồn sổ bằng kiểm kê.</p></article><article class="insight"><h3>Cần giữ rõ giới hạn gán nguồn nội dung</h3><p>8 video thiếu mã người phụ trách được ghi UNKNOWN. 5.102/6.000 đơn chưa gán video, tương đương 85,03%.</p><p><b>Đề xuất: </b>Bổ sung quy trình ghi nhận video và người phụ trách. Không suy đoán creator_id từ tên và không coi toàn bộ đơn thiếu video là lỗi dữ liệu.</p></article></section><section id="01_overview"><span class="label">01 / SQL ANALYSIS</span><h2>Tổng quan hoạt động</h2><p>Mỗi kênh có bao nhiêu đơn, tỷ lệ hủy và hoàn như thế nào?</p><p class="note">Mẫu số của cả hai tỷ lệ là toàn bộ đơn trong quý, không phải chỉ đơn hoàn thành.</p><details><summary>Xem câu lệnh SQL</summary><pre><code>SELECT channel,COUNT(*) AS total_orders,
+ SUM(CASE WHEN status=&#x27;completed&#x27; THEN 1 ELSE 0 END) AS completed_orders,
+ SUM(CASE WHEN status=&#x27;cancelled&#x27; THEN 1 ELSE 0 END) AS cancelled_orders,
+ SUM(CASE WHEN status=&#x27;returned&#x27; THEN 1 ELSE 0 END) AS returned_orders,
+ ROUND(100.0*SUM(CASE WHEN status=&#x27;cancelled&#x27; THEN 1 ELSE 0 END)/COUNT(*),2) AS cancellation_rate_pct,
+ ROUND(100.0*SUM(CASE WHEN status=&#x27;returned&#x27; THEN 1 ELSE 0 END)/COUNT(*),2) AS return_rate_pct
+FROM orders WHERE DATE(order_date)&gt;=&#x27;2026-01-01&#x27; AND DATE(order_date)&lt;&#x27;2026-04-01&#x27;
+GROUP BY channel ORDER BY total_orders DESC;</code></pre></details><div class="scroll"><table class="dataframe data">
+  <thead>
+    <tr style="text-align: right;">
+      <th>channel</th>
+      <th>total_orders</th>
+      <th>completed_orders</th>
+      <th>cancelled_orders</th>
+      <th>returned_orders</th>
+      <th>cancellation_rate_pct</th>
+      <th>return_rate_pct</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Shopee</td>
+      <td>2009</td>
+      <td>1680</td>
+      <td>151</td>
+      <td>178</td>
+      <td>7.52</td>
+      <td>8.86</td>
+    </tr>
+    <tr>
+      <td>TikTok Shop</td>
+      <td>2001</td>
+      <td>1641</td>
+      <td>179</td>
+      <td>181</td>
+      <td>8.95</td>
+      <td>9.05</td>
+    </tr>
+    <tr>
+      <td>Lazada</td>
+      <td>1990</td>
+      <td>1686</td>
+      <td>140</td>
+      <td>164</td>
+      <td>7.04</td>
+      <td>8.24</td>
+    </tr>
+  </tbody>
+</table></div><p class="muted">Hiển thị 3/3 dòng. Kết quả đầy đủ: results/01_overview.csv</p><p><b>Nhận xét: </b>Tỷ lệ hủy 8,95%, tỷ lệ hoàn 9,05%; mẫu số đều là 2.001 đơn TikTok Shop.</p></section><section id="02_monthly_sales"><span class="label">02 / SQL ANALYSIS</span><h2>Doanh thu và đóng góp theo tháng</h2><p>Doanh thu, AOV và đóng góp trước quảng cáo thay đổi ra sao?</p><p class="note">Phí cộng đúng một lần mỗi đơn. AOV = doanh thu thuần / số đơn completed. Ngày báo cáo là order_date với trạng thái cuối cùng.</p><details><summary>Xem câu lệnh SQL</summary><pre><code>SELECT SUBSTR(DATE(order_date),1,7) AS month,channel,COUNT(*) AS total_orders,
+ SUM(CASE WHEN status=&#x27;completed&#x27; THEN 1 ELSE 0 END) AS completed_orders,
+ SUM(net_sales_vnd) AS net_sales_vnd,SUM(cogs_vnd) AS cogs_vnd,
+ SUM(platform_fee_vnd) AS platform_fee_vnd,SUM(shipping_cost_vnd) AS shipping_cost_vnd,
+ SUM(contribution_before_ads_vnd) AS contribution_before_ads_vnd,
+ ROUND(1.0*SUM(net_sales_vnd)/NULLIF(SUM(CASE WHEN status=&#x27;completed&#x27; THEN 1 ELSE 0 END),0),0) AS aov_vnd
+FROM vw_orders_kpi WHERE DATE(order_date)&gt;=&#x27;2026-01-01&#x27; AND DATE(order_date)&lt;&#x27;2026-04-01&#x27;
+GROUP BY SUBSTR(DATE(order_date),1,7),channel ORDER BY month,channel;</code></pre></details><div class="scroll"><table class="dataframe data">
+  <thead>
+    <tr style="text-align: right;">
+      <th>month</th>
+      <th>channel</th>
+      <th>total_orders</th>
+      <th>completed_orders</th>
+      <th>net_sales_vnd</th>
+      <th>cogs_vnd</th>
+      <th>platform_fee_vnd</th>
+      <th>shipping_cost_vnd</th>
+      <th>contribution_before_ads_vnd</th>
+      <th>aov_vnd</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2026-01</td>
+      <td>Lazada</td>
+      <td>725</td>
+      <td>614</td>
+      <td>605122000</td>
+      <td>408128000</td>
+      <td>72614640</td>
+      <td>13440000</td>
+      <td>110939360</td>
+      <td>985541.0</td>
+    </tr>
+    <tr>
+      <td>2026-01</td>
+      <td>Shopee</td>
+      <td>716</td>
+      <td>592</td>
+      <td>576314000</td>
+      <td>385138000</td>
+      <td>69157680</td>
+      <td>13140000</td>
+      <td>108878320</td>
+      <td>973503.0</td>
+    </tr>
+    <tr>
+      <td>2026-01</td>
+      <td>TikTok Shop</td>
+      <td>762</td>
+      <td>618</td>
+      <td>626688000</td>
+      <td>428550000</td>
+      <td>75202560</td>
+      <td>13760000</td>
+      <td>109175440</td>
+      <td>1014058.0</td>
+    </tr>
+    <tr>
+      <td>2026-02</td>
+      <td>Lazada</td>
+      <td>643</td>
+      <td>549</td>
+      <td>536460000</td>
+      <td>362133000</td>
+      <td>64375200</td>
+      <td>12000000</td>
+      <td>97951800</td>
+      <td>977158.0</td>
+    </tr>
+    <tr>
+      <td>2026-02</td>
+      <td>Shopee</td>
+      <td>695</td>
+      <td>592</td>
+      <td>589091000</td>
+      <td>397791000</td>
+      <td>70690920</td>
+      <td>13000000</td>
+      <td>107609080</td>
+      <td>995086.0</td>
+    </tr>
+    <tr>
+      <td>2026-02</td>
+      <td>TikTok Shop</td>
+      <td>631</td>
+      <td>526</td>
+      <td>512638000</td>
+      <td>350178000</td>
+      <td>61516560</td>
+      <td>11660000</td>
+      <td>89283440</td>
+      <td>974597.0</td>
+    </tr>
+    <tr>
+      <td>2026-03</td>
+      <td>Lazada</td>
+      <td>622</td>
+      <td>523</td>
+      <td>472626000</td>
+      <td>321669000</td>
+      <td>56715120</td>
+      <td>11560000</td>
+      <td>82681880</td>
+      <td>903683.0</td>
+    </tr>
+    <tr>
+      <td>2026-03</td>
+      <td>Shopee</td>
+      <td>598</td>
+      <td>496</td>
+      <td>472840000</td>
+      <td>320171000</td>
+      <td>56740800</td>
+      <td>11020000</td>
+      <td>84908200</td>
+      <td>953306.0</td>
+    </tr>
+    <tr>
+      <td>2026-03</td>
+      <td>TikTok Shop</td>
+      <td>608</td>
+      <td>497</td>
+      <td>492122000</td>
+      <td>334957000</td>
+      <td>59054640</td>
+      <td>11020000</td>
+      <td>87090360</td>
+      <td>990185.0</td>
+    </tr>
+  </tbody>
+</table></div><p class="muted">Hiển thị 9/9 dòng. Kết quả đầy đủ: results/02_monthly_sales.csv</p></section><section id="03_monthly_growth"><span class="label">03 / SQL ANALYSIS</span><h2>Tăng trưởng doanh thu</h2><p>Doanh thu thuần tăng giảm bao nhiêu so với tháng trước?</p><p class="note">Tháng đầu tiên không có tháng trước trong bộ dữ liệu nên growth_pct là NULL.</p><details><summary>Xem câu lệnh SQL</summary><pre><code>WITH monthly AS (
+ SELECT SUBSTR(DATE(order_date),1,7) AS month,SUM(net_sales_vnd) AS net_sales_vnd
+ FROM vw_orders_kpi WHERE DATE(order_date)&gt;=&#x27;2026-01-01&#x27; AND DATE(order_date)&lt;&#x27;2026-04-01&#x27; GROUP BY 1
+), previous AS (
+ SELECT *,LAG(net_sales_vnd) OVER(ORDER BY month) AS previous_month_vnd FROM monthly
+)
+SELECT *,ROUND(100.0*(net_sales_vnd-previous_month_vnd)/NULLIF(previous_month_vnd,0),2) AS growth_pct FROM previous ORDER BY month;</code></pre></details><div class="scroll"><table class="dataframe data">
+  <thead>
+    <tr style="text-align: right;">
+      <th>month</th>
+      <th>net_sales_vnd</th>
+      <th>previous_month_vnd</th>
+      <th>growth_pct</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2026-01</td>
+      <td>1808124000</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-02</td>
+      <td>1638189000</td>
+      <td>1808124000.0</td>
+      <td>-9.40</td>
+    </tr>
+    <tr>
+      <td>2026-03</td>
+      <td>1437588000</td>
+      <td>1638189000.0</td>
+      <td>-12.25</td>
+    </tr>
+  </tbody>
+</table></div><p class="muted">Hiển thị 3/3 dòng. Kết quả đầy đủ: results/03_monthly_growth.csv</p><p><b>Nhận xét: </b>Doanh thu thuần tháng 1 là 1.808.124.000 VND; tháng 2 là 1.638.189.000 VND (−9,40%); tháng 3 là 1.437.588.000 VND (−12,25%).</p></section><section id="04_product_ranking"><span class="label">04 / SQL ANALYSIS</span><h2>Sản phẩm tạo lãi gộp</h2><p>10 SKU có lãi gộp cao nhất trong quý là gì?</p><p class="note">Lãi gộp chưa trừ phí sàn, vận chuyển, Ads hoặc chi phí vận hành. Không gán nguyên phí đơn cho mỗi SKU.</p><details><summary>Xem câu lệnh SQL</summary><pre><code>WITH product_totals AS (
+ SELECT sku,SUM(sold_units) AS sold_units,SUM(net_sales_vnd) AS net_sales_vnd,
+ SUM(net_sales_vnd-cogs_vnd) AS gross_profit_vnd
+ FROM vw_sales_lines WHERE DATE(order_date)&gt;=&#x27;2026-01-01&#x27; AND DATE(order_date)&lt;&#x27;2026-04-01&#x27; GROUP BY sku
+)
+SELECT DENSE_RANK() OVER(ORDER BY t.gross_profit_vnd DESC) AS profit_rank,
+ t.sku,p.product_name,p.brand,t.sold_units,t.net_sales_vnd,t.gross_profit_vnd,
+ ROUND(100.0*t.gross_profit_vnd/NULLIF(t.net_sales_vnd,0),2) AS gross_margin_pct
+FROM product_totals t LEFT JOIN products p ON p.sku=t.sku
+ORDER BY t.gross_profit_vnd DESC,t.sku LIMIT 10;</code></pre></details><div class="scroll"><table class="dataframe data">
+  <thead>
+    <tr style="text-align: right;">
+      <th>profit_rank</th>
+      <th>sku</th>
+      <th>product_name</th>
+      <th>brand</th>
+      <th>sold_units</th>
+      <th>net_sales_vnd</th>
+      <th>gross_profit_vnd</th>
+      <th>gross_margin_pct</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>SKU0801</td>
+      <td>Sản phẩm gia dụng 0801</td>
+      <td>NhaXinh</td>
+      <td>35</td>
+      <td>11520000</td>
+      <td>4870000</td>
+      <td>42.27</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>SKU0674</td>
+      <td>Sản phẩm gia dụng 0674</td>
+      <td>BepViet</td>
+      <td>31</td>
+      <td>7842000</td>
+      <td>4463000</td>
+      <td>56.91</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>SKU0186</td>
+      <td>Sản phẩm gia dụng 0186</td>
+      <td>NhaXinh</td>
+      <td>32</td>
+      <td>8180000</td>
+      <td>4436000</td>
+      <td>54.23</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>SKU0391</td>
+      <td>Sản phẩm gia dụng 0391</td>
+      <td>AnHome</td>
+      <td>31</td>
+      <td>10406000</td>
+      <td>4206000</td>
+      <td>40.42</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>SKU0513</td>
+      <td>Sản phẩm gia dụng 0513</td>
+      <td>NhaXinh</td>
+      <td>29</td>
+      <td>7785000</td>
+      <td>4044000</td>
+      <td>51.95</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>SKU0102</td>
+      <td>Sản phẩm gia dụng 0102</td>
+      <td>NhaXinh</td>
+      <td>29</td>
+      <td>7449000</td>
+      <td>3998000</td>
+      <td>53.67</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>SKU0031</td>
+      <td>Sản phẩm gia dụng 0031</td>
+      <td>AnHome</td>
+      <td>28</td>
+      <td>11675000</td>
+      <td>3919000</td>
+      <td>33.57</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>SKU0787</td>
+      <td>Sản phẩm gia dụng 0787</td>
+      <td>AnHome</td>
+      <td>34</td>
+      <td>10798000</td>
+      <td>3896000</td>
+      <td>36.08</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>SKU0289</td>
+      <td>Sản phẩm gia dụng 0289</td>
+      <td>AnHome</td>
+      <td>30</td>
+      <td>9150000</td>
+      <td>3870000</td>
+      <td>42.30</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>SKU0284</td>
+      <td>Sản phẩm gia dụng 0284</td>
+      <td>BepViet</td>
+      <td>27</td>
+      <td>8946000</td>
+      <td>3816000</td>
+      <td>42.66</td>
+    </tr>
+  </tbody>
+</table></div><p class="muted">Hiển thị 10/10 dòng. Kết quả đầy đủ: results/04_product_ranking.csv</p></section><section id="05_payment_reconciliation"><span class="label">05 / SQL ANALYSIS</span><h2>Đối soát thanh toán</h2><p>Kênh nào có chênh lệch thực nhận so với dự kiến?</p><p class="note">Cohort đơn Q1, gồm thanh toán sau 31/03 nếu có. Chênh lệch ròng có thể che khoản thiếu do bù trừ; xem thêm trị tuyệt đối và shortfall.</p><details><summary>Xem câu lệnh SQL</summary><pre><code>SELECT o.channel,COUNT(*) AS transactions,
+ SUM(CASE WHEN p.actual_payout_vnd&lt;&gt;p.expected_payout_vnd THEN 1 ELSE 0 END) AS discrepant_transactions,
+ SUM(p.expected_payout_vnd) AS expected_payout_vnd,SUM(p.actual_payout_vnd) AS actual_payout_vnd,
+ SUM(p.actual_payout_vnd-p.expected_payout_vnd) AS net_difference_vnd,
+ SUM(ABS(p.actual_payout_vnd-p.expected_payout_vnd)) AS absolute_difference_vnd,
+ SUM(CASE WHEN p.actual_payout_vnd&lt;p.expected_payout_vnd THEN p.expected_payout_vnd-p.actual_payout_vnd ELSE 0 END) AS shortfall_vnd
+FROM payments p JOIN orders o ON o.order_id=p.order_id
+WHERE o.order_date&gt;=&#x27;2026-01-01&#x27; AND o.order_date&lt;&#x27;2026-04-01&#x27;
+GROUP BY o.channel ORDER BY absolute_difference_vnd DESC;</code></pre></details><div class="scroll"><table class="dataframe data">
+  <thead>
+    <tr style="text-align: right;">
+      <th>channel</th>
+      <th>transactions</th>
+      <th>discrepant_transactions</th>
+      <th>expected_payout_vnd</th>
+      <th>actual_payout_vnd</th>
+      <th>net_difference_vnd</th>
+      <th>absolute_difference_vnd</th>
+      <th>shortfall_vnd</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Shopee</td>
+      <td>2009</td>
+      <td>24</td>
+      <td>1404495600</td>
+      <td>1404615600</td>
+      <td>120000</td>
+      <td>120000</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>Lazada</td>
+      <td>1990</td>
+      <td>24</td>
+      <td>1383503040</td>
+      <td>1383623040</td>
+      <td>120000</td>
+      <td>120000</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>TikTok Shop</td>
+      <td>2001</td>
+      <td>14</td>
+      <td>1399234240</td>
+      <td>1399304240</td>
+      <td>70000</td>
+      <td>70000</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table></div><p class="muted">Hiển thị 3/3 dòng. Kết quả đầy đủ: results/05_payment_reconciliation.csv</p><p><b>Nhận xét: </b>Thực nhận cao hơn dự kiến tổng cộng 310.000 VND; Shopee 120.000, Lazada 120.000, TikTok Shop 70.000. Trong bộ mô phỏng này không có khoản thiếu.</p></section><section id="06_payment_exceptions"><span class="label">06 / SQL ANALYSIS</span><h2>Danh sách cần xác minh</h2><p>Những giao dịch nào cần được kiểm tra với sàn?</p><p class="note">Giữ nguyên actual_payout_vnd để điều tra; không tự sửa cho bằng expected.</p><details><summary>Xem câu lệnh SQL</summary><pre><code>SELECT p.transaction_id,p.order_id,o.channel,p.settlement_date,
+ p.expected_payout_vnd,p.actual_payout_vnd,
+ p.actual_payout_vnd-p.expected_payout_vnd AS difference_vnd
+FROM payments p JOIN orders o ON o.order_id=p.order_id
+WHERE p.actual_payout_vnd&lt;&gt;p.expected_payout_vnd
+ AND o.order_date&gt;=&#x27;2026-01-01&#x27; AND o.order_date&lt;&#x27;2026-04-01&#x27;
+ORDER BY ABS(p.actual_payout_vnd-p.expected_payout_vnd) DESC,p.transaction_id;</code></pre></details><div class="scroll"><table class="dataframe data">
+  <thead>
+    <tr style="text-align: right;">
+      <th>transaction_id</th>
+      <th>order_id</th>
+      <th>channel</th>
+      <th>settlement_date</th>
+      <th>expected_payout_vnd</th>
+      <th>actual_payout_vnd</th>
+      <th>difference_vnd</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>TXN000001</td>
+      <td>O000001</td>
+      <td>Lazada</td>
+      <td>2026-02-11</td>
+      <td>650560</td>
+      <td>655560</td>
+      <td>5000</td>
+    </tr>
+    <tr>
+      <td>TXN000098</td>
+      <td>O000098</td>
+      <td>Lazada</td>
+      <td>2026-02-16</td>
+      <td>-20000</td>
+      <td>-15000</td>
+      <td>5000</td>
+    </tr>
+    <tr>
+      <td>TXN000195</td>
+      <td>O000195</td>
+      <td>Lazada</td>
+      <td>2026-01-25</td>
+      <td>1393280</td>
+      <td>1398280</td>
+      <td>5000</td>
+    </tr>
+    <tr>
+      <td>TXN000292</td>
+      <td>O000292</td>
+      <td>Lazada</td>
+      <td>2026-02-16</td>
+      <td>1014880</td>
+      <td>1019880</td>
+      <td>5000</td>
+    </tr>
+    <tr>
+      <td>TXN000389</td>
+      <td>O000389</td>
+      <td>TikTok Shop</td>
+      <td>2026-02-24</td>
+      <td>281840</td>
+      <td>286840</td>
+      <td>5000</td>
+    </tr>
+    <tr>
+      <td>TXN000486</td>
+      <td>O000486</td>
+      <td>Lazada</td>
+      <td>2026-03-16</td>
+      <td>727120</td>
+      <td>732120</td>
+      <td>5000</td>
+    </tr>
+    <tr>
+      <td>TXN000583</td>
+      <td>O000583</td>
+      <td>Shopee</td>
+      <td>2026-02-02</td>
+      <td>263360</td>
+      <td>268360</td>
+      <td>5000</td>
+    </tr>
+    <tr>
+      <td>TXN000680</td>
+      <td>O000680</td>
+      <td>TikTok Shop</td>
+      <td>2026-02-13</td>
+      <td>886400</td>
+      <td>891400</td>
+      <td>5000</td>
+    </tr>
+    <tr>
+      <td>TXN000777</td>
+      <td>O000777</td>
+      <td>Shopee</td>
+      <td>2026-03-31</td>
+      <td>0</td>
+      <td>5000</td>
+      <td>5000</td>
+    </tr>
+    <tr>
+      <td>TXN000874</td>
+      <td>O000874</td>
+      <td>Shopee</td>
+      <td>2026-01-08</td>
+      <td>738560</td>
+      <td>743560</td>
+      <td>5000</td>
+    </tr>
+    <tr>
+      <td>TXN000971</td>
+      <td>O000971</td>
+      <td>Shopee</td>
+      <td>2026-01-31</td>
+      <td>0</td>
+      <td>5000</td>
+      <td>5000</td>
+    </tr>
+    <tr>
+      <td>TXN001068</td>
+      <td>O001068</td>
+      <td>Shopee</td>
+      <td>2026-01-16</td>
+      <td>1610640</td>
+      <td>1615640</td>
+      <td>5000</td>
+    </tr>
+  </tbody>
+</table></div><p class="muted">Hiển thị 12/62 dòng. Kết quả đầy đủ: results/06_payment_exceptions.csv</p></section><section id="07_stock_reconciliation"><span class="label">07 / SQL ANALYSIS</span><h2>Đối soát tồn kho</h2><p>Tồn sổ và kiểm kê ngày 31/03 chênh lệch như thế nào?</p><p class="note">Tồn sổ đã gồm OPENING và RECEIPT trong movements; không cộng receipts lần nữa. Thiếu kiểm kê giữ NULL, không thay bằng 0.</p><details><summary>Xem câu lệnh SQL</summary><pre><code>WITH stock AS (
+ SELECT sku,warehouse_id,SUM(qty_signed) AS book_qty FROM inventory_movements
+ WHERE DATE(date)&lt;=&#x27;2026-03-31&#x27; GROUP BY sku,warehouse_id
+), counts AS (
+ SELECT sku,warehouse_id,counted_qty FROM stock_counts WHERE DATE(count_date)=&#x27;2026-03-31&#x27;
+), universe AS (
+ SELECT sku,warehouse_id FROM stock UNION SELECT sku,warehouse_id FROM counts
+)
+SELECT u.sku,u.warehouse_id,p.product_name,COALESCE(s.book_qty,0) AS book_qty,
+ c.counted_qty,c.counted_qty-COALESCE(s.book_qty,0) AS variance_qty,
+ (c.counted_qty-COALESCE(s.book_qty,0))*p.standard_cost_vnd AS variance_value_vnd,
+ CASE WHEN c.counted_qty IS NULL THEN &#x27;NO_COUNT&#x27;
+ WHEN c.counted_qty&lt;&gt;COALESCE(s.book_qty,0) THEN &#x27;MISMATCH&#x27; ELSE &#x27;MATCH&#x27; END AS check_status
+FROM universe u LEFT JOIN stock s ON s.sku=u.sku AND s.warehouse_id=u.warehouse_id
+LEFT JOIN counts c ON c.sku=u.sku AND c.warehouse_id=u.warehouse_id
+LEFT JOIN products p ON p.sku=u.sku
+ORDER BY ABS(c.counted_qty-COALESCE(s.book_qty,0)) DESC,u.sku,u.warehouse_id;</code></pre></details><div class="scroll"><table class="dataframe data">
+  <thead>
+    <tr style="text-align: right;">
+      <th>sku</th>
+      <th>warehouse_id</th>
+      <th>product_name</th>
+      <th>book_qty</th>
+      <th>counted_qty</th>
+      <th>variance_qty</th>
+      <th>variance_value_vnd</th>
+      <th>check_status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>SKU0001</td>
+      <td>WH01</td>
+      <td>Sản phẩm gia dụng 0001</td>
+      <td>57</td>
+      <td>59</td>
+      <td>2</td>
+      <td>476000</td>
+      <td>MISMATCH</td>
+    </tr>
+    <tr>
+      <td>SKU0056</td>
+      <td>WH02</td>
+      <td>Sản phẩm gia dụng 0056</td>
+      <td>57</td>
+      <td>59</td>
+      <td>2</td>
+      <td>506000</td>
+      <td>MISMATCH</td>
+    </tr>
+    <tr>
+      <td>SKU0093</td>
+      <td>WH02</td>
+      <td>Sản phẩm gia dụng 0093</td>
+      <td>74</td>
+      <td>72</td>
+      <td>-2</td>
+      <td>-572000</td>
+      <td>MISMATCH</td>
+    </tr>
+    <tr>
+      <td>SKU0112</td>
+      <td>WH01</td>
+      <td>Sản phẩm gia dụng 0112</td>
+      <td>124</td>
+      <td>126</td>
+      <td>2</td>
+      <td>430000</td>
+      <td>MISMATCH</td>
+    </tr>
+    <tr>
+      <td>SKU0149</td>
+      <td>WH01</td>
+      <td>Sản phẩm gia dụng 0149</td>
+      <td>48</td>
+      <td>50</td>
+      <td>2</td>
+      <td>170000</td>
+      <td>MISMATCH</td>
+    </tr>
+    <tr>
+      <td>SKU0223</td>
+      <td>WH01</td>
+      <td>Sản phẩm gia dụng 0223</td>
+      <td>59</td>
+      <td>61</td>
+      <td>2</td>
+      <td>532000</td>
+      <td>MISMATCH</td>
+    </tr>
+    <tr>
+      <td>SKU0241</td>
+      <td>WH02</td>
+      <td>Sản phẩm gia dụng 0241</td>
+      <td>117</td>
+      <td>119</td>
+      <td>2</td>
+      <td>434000</td>
+      <td>MISMATCH</td>
+    </tr>
+    <tr>
+      <td>SKU0334</td>
+      <td>WH01</td>
+      <td>Sản phẩm gia dụng 0334</td>
+      <td>119</td>
+      <td>121</td>
+      <td>2</td>
+      <td>404000</td>
+      <td>MISMATCH</td>
+    </tr>
+    <tr>
+      <td>SKU0389</td>
+      <td>WH02</td>
+      <td>Sản phẩm gia dụng 0389</td>
+      <td>93</td>
+      <td>95</td>
+      <td>2</td>
+      <td>118000</td>
+      <td>MISMATCH</td>
+    </tr>
+    <tr>
+      <td>SKU0408</td>
+      <td>WH01</td>
+      <td>Sản phẩm gia dụng 0408</td>
+      <td>113</td>
+      <td>111</td>
+      <td>-2</td>
+      <td>-72000</td>
+      <td>MISMATCH</td>
+    </tr>
+    <tr>
+      <td>SKU0426</td>
+      <td>WH02</td>
+      <td>Sản phẩm gia dụng 0426</td>
+      <td>55</td>
+      <td>57</td>
+      <td>2</td>
+      <td>344000</td>
+      <td>MISMATCH</td>
+    </tr>
+    <tr>
+      <td>SKU0445</td>
+      <td>WH01</td>
+      <td>Sản phẩm gia dụng 0445</td>
+      <td>55</td>
+      <td>53</td>
+      <td>-2</td>
+      <td>-526000</td>
+      <td>MISMATCH</td>
+    </tr>
+  </tbody>
+</table></div><p class="muted">Hiển thị 12/2,400 dòng. Kết quả đầy đủ: results/07_stock_reconciliation.csv</p><p><b>Nhận xét: </b>Trong 2.400 cặp SKU–kho, 2.335 khớp và 65 lệch (2,71%). Tồn sổ cuối quý là 184.188 sản phẩm.</p></section><section id="08_daily_stock"><span class="label">08 / SQL ANALYSIS</span><h2>Tồn cuối ngày liên tục</h2><p>Làm sao tạo lịch tồn kho kể cả ngày không phát sinh?</p><p class="note">90 ngày × 1.200 SKU × 2 kho = 216.000 dòng. Ngày không phát sinh movement=0, tồn cuối ngày vẫn cộng dồn.</p><details><summary>Xem câu lệnh SQL</summary><pre><code>WITH RECURSIVE dates(date) AS (
+ SELECT &#x27;2026-01-01&#x27; UNION ALL SELECT DATE(date,&#x27;+1 day&#x27;) FROM dates WHERE date&lt;&#x27;2026-03-31&#x27;
+), warehouses AS (
+ SELECT DISTINCT warehouse_id FROM inventory_movements
+), daily AS (
+ SELECT DATE(date) AS date,sku,warehouse_id,SUM(qty_signed) AS movement_qty FROM inventory_movements
+ WHERE DATE(date)&gt;=&#x27;2026-01-01&#x27; AND DATE(date)&lt;&#x27;2026-04-01&#x27; GROUP BY DATE(date),sku,warehouse_id
+), opening AS (
+ SELECT sku,warehouse_id,SUM(qty_signed) AS opening_qty FROM inventory_movements WHERE DATE(date)&lt;&#x27;2026-01-01&#x27; GROUP BY sku,warehouse_id
+), grid AS (
+ SELECT d.date,p.sku,w.warehouse_id,COALESCE(m.movement_qty,0) AS movement_qty,COALESCE(o.opening_qty,0) AS opening_qty
+ FROM dates d CROSS JOIN products p CROSS JOIN warehouses w
+ LEFT JOIN daily m ON m.date=d.date AND m.sku=p.sku AND m.warehouse_id=w.warehouse_id
+ LEFT JOIN opening o ON o.sku=p.sku AND o.warehouse_id=w.warehouse_id
+)
+SELECT date,sku,warehouse_id,movement_qty,opening_qty+
+ SUM(movement_qty) OVER(PARTITION BY sku,warehouse_id ORDER BY date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS closing_qty
+FROM grid ORDER BY sku,warehouse_id,date;</code></pre></details><div class="scroll"><table class="dataframe data">
+  <thead>
+    <tr style="text-align: right;">
+      <th>date</th>
+      <th>sku</th>
+      <th>warehouse_id</th>
+      <th>movement_qty</th>
+      <th>closing_qty</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2026-01-01</td>
+      <td>SKU0001</td>
+      <td>WH01</td>
+      <td>60</td>
+      <td>60</td>
+    </tr>
+    <tr>
+      <td>2026-01-02</td>
+      <td>SKU0001</td>
+      <td>WH01</td>
+      <td>0</td>
+      <td>60</td>
+    </tr>
+    <tr>
+      <td>2026-01-03</td>
+      <td>SKU0001</td>
+      <td>WH01</td>
+      <td>0</td>
+      <td>60</td>
+    </tr>
+    <tr>
+      <td>2026-01-04</td>
+      <td>SKU0001</td>
+      <td>WH01</td>
+      <td>0</td>
+      <td>60</td>
+    </tr>
+    <tr>
+      <td>2026-01-05</td>
+      <td>SKU0001</td>
+      <td>WH01</td>
+      <td>0</td>
+      <td>60</td>
+    </tr>
+    <tr>
+      <td>2026-01-06</td>
+      <td>SKU0001</td>
+      <td>WH01</td>
+      <td>0</td>
+      <td>60</td>
+    </tr>
+    <tr>
+      <td>2026-01-07</td>
+      <td>SKU0001</td>
+      <td>WH01</td>
+      <td>0</td>
+      <td>60</td>
+    </tr>
+    <tr>
+      <td>2026-01-08</td>
+      <td>SKU0001</td>
+      <td>WH01</td>
+      <td>0</td>
+      <td>60</td>
+    </tr>
+    <tr>
+      <td>2026-01-09</td>
+      <td>SKU0001</td>
+      <td>WH01</td>
+      <td>0</td>
+      <td>60</td>
+    </tr>
+    <tr>
+      <td>2026-01-10</td>
+      <td>SKU0001</td>
+      <td>WH01</td>
+      <td>0</td>
+      <td>60</td>
+    </tr>
+    <tr>
+      <td>2026-01-11</td>
+      <td>SKU0001</td>
+      <td>WH01</td>
+      <td>0</td>
+      <td>60</td>
+    </tr>
+    <tr>
+      <td>2026-01-12</td>
+      <td>SKU0001</td>
+      <td>WH01</td>
+      <td>0</td>
+      <td>60</td>
+    </tr>
+  </tbody>
+</table></div><p class="muted">Hiển thị 12/216,000 dòng. Kết quả đầy đủ: results/08_daily_stock.csv</p></section><section id="09_warehouse_productivity"><span class="label">09 / SQL ANALYSIS</span><h2>Năng suất kho</h2><p>Năng suất và tỷ lệ lỗi đóng gói của từng nhân viên như thế nào?</p><p class="note">Tổng hợp công và tác vụ riêng trước khi JOIN. Có tính ngày chấm công không có task. Giờ khả dụng khác thời gian xử lý thực tế.</p><details><summary>Xem câu lệnh SQL</summary><pre><code>WITH task_day AS (
+ SELECT DATE(date) AS date,employee_id,warehouse_id,COUNT(*) AS pack_tasks,SUM(units) AS units,SUM(error_flag) AS error_tasks
+ FROM warehouse_tasks WHERE task_type=&#x27;PACK&#x27; AND date&gt;=&#x27;2026-01-01&#x27; AND DATE(date)&lt;&#x27;2026-04-01&#x27;
+ GROUP BY DATE(date),employee_id,warehouse_id
+), attendance_day AS (
+ SELECT DATE(date) AS date,employee_id,warehouse_id,MAX(employee_name) AS employee_name,SUM(paid_hours-break_hours) AS available_hours
+ FROM attendance WHERE department=&#x27;Kho&#x27; AND date&gt;=&#x27;2026-01-01&#x27; AND DATE(date)&lt;&#x27;2026-04-01&#x27;
+ GROUP BY DATE(date),employee_id,warehouse_id
+), combined AS (
+ SELECT a.*,COALESCE(t.pack_tasks,0) AS pack_tasks,COALESCE(t.units,0) AS units,COALESCE(t.error_tasks,0) AS error_tasks
+ FROM attendance_day a LEFT JOIN task_day t ON t.date=a.date AND t.employee_id=a.employee_id AND t.warehouse_id=a.warehouse_id
+)
+SELECT employee_id,MAX(employee_name) AS employee_name,SUM(available_hours) AS available_hours,
+ SUM(pack_tasks) AS pack_tasks,SUM(units) AS packed_units,
+ ROUND(1.0*SUM(units)/NULLIF(SUM(available_hours),0),2) AS units_per_available_hour,
+ ROUND(100.0*SUM(error_tasks)/NULLIF(SUM(pack_tasks),0),2) AS error_rate_pct
+FROM combined GROUP BY employee_id ORDER BY units_per_available_hour DESC,employee_id;</code></pre></details><div class="scroll"><table class="dataframe data">
+  <thead>
+    <tr style="text-align: right;">
+      <th>employee_id</th>
+      <th>employee_name</th>
+      <th>available_hours</th>
+      <th>pack_tasks</th>
+      <th>packed_units</th>
+      <th>units_per_available_hour</th>
+      <th>error_rate_pct</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>E001</td>
+      <td>Nhân viên 01</td>
+      <td>543.5</td>
+      <td>300</td>
+      <td>1241</td>
+      <td>2.28</td>
+      <td>3.33</td>
+    </tr>
+    <tr>
+      <td>E020</td>
+      <td>Nhân viên 20</td>
+      <td>551.0</td>
+      <td>310</td>
+      <td>1191</td>
+      <td>2.16</td>
+      <td>2.58</td>
+    </tr>
+    <tr>
+      <td>E009</td>
+      <td>Nhân viên 09</td>
+      <td>575.5</td>
+      <td>313</td>
+      <td>1224</td>
+      <td>2.13</td>
+      <td>2.88</td>
+    </tr>
+    <tr>
+      <td>E018</td>
+      <td>Nhân viên 18</td>
+      <td>523.5</td>
+      <td>271</td>
+      <td>1116</td>
+      <td>2.13</td>
+      <td>2.21</td>
+    </tr>
+    <tr>
+      <td>E002</td>
+      <td>Nhân viên 02</td>
+      <td>587.0</td>
+      <td>302</td>
+      <td>1238</td>
+      <td>2.11</td>
+      <td>3.31</td>
+    </tr>
+    <tr>
+      <td>E015</td>
+      <td>Nhân viên 15</td>
+      <td>602.5</td>
+      <td>319</td>
+      <td>1260</td>
+      <td>2.09</td>
+      <td>2.51</td>
+    </tr>
+    <tr>
+      <td>E012</td>
+      <td>Nhân viên 12</td>
+      <td>565.5</td>
+      <td>287</td>
+      <td>1161</td>
+      <td>2.05</td>
+      <td>4.18</td>
+    </tr>
+    <tr>
+      <td>E005</td>
+      <td>Nhân viên 05</td>
+      <td>512.5</td>
+      <td>248</td>
+      <td>1010</td>
+      <td>1.97</td>
+      <td>4.84</td>
+    </tr>
+    <tr>
+      <td>E016</td>
+      <td>Nhân viên 16</td>
+      <td>573.0</td>
+      <td>275</td>
+      <td>1116</td>
+      <td>1.95</td>
+      <td>4.36</td>
+    </tr>
+    <tr>
+      <td>E004</td>
+      <td>Nhân viên 04</td>
+      <td>532.5</td>
+      <td>265</td>
+      <td>1035</td>
+      <td>1.94</td>
+      <td>3.02</td>
+    </tr>
+    <tr>
+      <td>E008</td>
+      <td>Nhân viên 08</td>
+      <td>566.5</td>
+      <td>283</td>
+      <td>1091</td>
+      <td>1.93</td>
+      <td>4.59</td>
+    </tr>
+    <tr>
+      <td>E010</td>
+      <td>Nhân viên 10</td>
+      <td>586.5</td>
+      <td>273</td>
+      <td>1132</td>
+      <td>1.93</td>
+      <td>1.47</td>
+    </tr>
+  </tbody>
+</table></div><p class="muted">Hiển thị 12/20 dòng. Kết quả đầy đủ: results/09_warehouse_productivity.csv</p></section><section id="10_video_ads"><span class="label">10 / SQL ANALYSIS</span><h2>Hiệu quả quảng cáo video</h2><p>Video nào tạo ROAS cao và chi phí sản xuất bao nhiêu?</p><p class="note">ROAS = tổng doanh thu do nền tảng gán / tổng spend; không AVG ROAS từng ngày. Chi phí video chỉ một lần. ROAS không chứng minh hiệu quả tăng thêm.</p><details><summary>Xem câu lệnh SQL</summary><pre><code>WITH ads AS (
+ SELECT video_id,SUM(spend_vnd) AS spend_vnd,SUM(impressions) AS impressions,SUM(clicks) AS clicks,
+ SUM(platform_attributed_orders) AS attributed_orders,SUM(platform_attributed_revenue_vnd) AS attributed_revenue_vnd
+ FROM ads_daily WHERE DATE(date)&gt;=&#x27;2026-01-01&#x27; AND DATE(date)&lt;&#x27;2026-04-01&#x27; GROUP BY video_id
+)
+SELECT a.video_id,c.creator_id,c.topic,a.spend_vnd,a.attributed_revenue_vnd,
+ ROUND(1.0*a.attributed_revenue_vnd/NULLIF(a.spend_vnd,0),2) AS roas,
+ ROUND(100.0*a.clicks/NULLIF(a.impressions,0),2) AS ctr_pct,
+ ROUND(1.0*a.spend_vnd/NULLIF(a.attributed_orders,0),0) AS attributed_cpa_vnd,
+ CASE WHEN c.publish_date&gt;=&#x27;2026-01-01&#x27; AND c.publish_date&lt;&#x27;2026-04-01&#x27; THEN c.production_cost_vnd ELSE 0 END AS q1_production_cost_vnd
+FROM ads a LEFT JOIN content c ON c.video_id=a.video_id ORDER BY roas DESC,a.video_id;</code></pre></details><div class="scroll"><table class="dataframe data">
+  <thead>
+    <tr style="text-align: right;">
+      <th>video_id</th>
+      <th>creator_id</th>
+      <th>topic</th>
+      <th>spend_vnd</th>
+      <th>attributed_revenue_vnd</th>
+      <th>roas</th>
+      <th>ctr_pct</th>
+      <th>attributed_cpa_vnd</th>
+      <th>q1_production_cost_vnd</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>VID0394</td>
+      <td>E024</td>
+      <td>Demo</td>
+      <td>578000</td>
+      <td>70276000</td>
+      <td>121.58</td>
+      <td>3.09</td>
+      <td>3440.0</td>
+      <td>200000</td>
+    </tr>
+    <tr>
+      <td>VID1100</td>
+      <td>E030</td>
+      <td>Review</td>
+      <td>742000</td>
+      <td>54206000</td>
+      <td>73.05</td>
+      <td>2.88</td>
+      <td>5936.0</td>
+      <td>200000</td>
+    </tr>
+    <tr>
+      <td>VID0007</td>
+      <td>UNKNOWN</td>
+      <td>Demo</td>
+      <td>608000</td>
+      <td>40344000</td>
+      <td>66.36</td>
+      <td>2.91</td>
+      <td>3897.0</td>
+      <td>200000</td>
+    </tr>
+    <tr>
+      <td>VID0577</td>
+      <td>E027</td>
+      <td>Demo</td>
+      <td>971000</td>
+      <td>60850000</td>
+      <td>62.67</td>
+      <td>3.16</td>
+      <td>6838.0</td>
+      <td>200000</td>
+    </tr>
+    <tr>
+      <td>VID0616</td>
+      <td>E026</td>
+      <td>Demo</td>
+      <td>647000</td>
+      <td>38942000</td>
+      <td>60.19</td>
+      <td>2.77</td>
+      <td>5176.0</td>
+      <td>100000</td>
+    </tr>
+    <tr>
+      <td>VID0108</td>
+      <td>E028</td>
+      <td>Mẹo sử dụng</td>
+      <td>684000</td>
+      <td>40800000</td>
+      <td>59.65</td>
+      <td>2.49</td>
+      <td>6453.0</td>
+      <td>200000</td>
+    </tr>
+    <tr>
+      <td>VID0455</td>
+      <td>E025</td>
+      <td>Review</td>
+      <td>1063000</td>
+      <td>62458000</td>
+      <td>58.76</td>
+      <td>3.00</td>
+      <td>6327.0</td>
+      <td>150000</td>
+    </tr>
+    <tr>
+      <td>VID0094</td>
+      <td>E024</td>
+      <td>Demo</td>
+      <td>999000</td>
+      <td>57722000</td>
+      <td>57.78</td>
+      <td>2.82</td>
+      <td>5581.0</td>
+      <td>150000</td>
+    </tr>
+    <tr>
+      <td>VID0160</td>
+      <td>E030</td>
+      <td>Demo</td>
+      <td>921000</td>
+      <td>53211000</td>
+      <td>57.78</td>
+      <td>2.75</td>
+      <td>6626.0</td>
+      <td>150000</td>
+    </tr>
+    <tr>
+      <td>VID0657</td>
+      <td>E027</td>
+      <td>Mẹo sử dụng</td>
+      <td>973000</td>
+      <td>53982000</td>
+      <td>55.48</td>
+      <td>2.83</td>
+      <td>6530.0</td>
+      <td>100000</td>
+    </tr>
+    <tr>
+      <td>VID0482</td>
+      <td>E022</td>
+      <td>Review</td>
+      <td>623000</td>
+      <td>34374000</td>
+      <td>55.17</td>
+      <td>2.04</td>
+      <td>5877.0</td>
+      <td>100000</td>
+    </tr>
+    <tr>
+      <td>VID0324</td>
+      <td>E024</td>
+      <td>Mẹo sử dụng</td>
+      <td>1051000</td>
+      <td>56519000</td>
+      <td>53.78</td>
+      <td>1.99</td>
+      <td>8408.0</td>
+      <td>100000</td>
+    </tr>
+  </tbody>
+</table></div><p class="muted">Hiển thị 12/1,200 dòng. Kết quả đầy đủ: results/10_video_ads.csv</p></section><section id="11_monthly_contribution"><span class="label">11 / SQL ANALYSIS</span><h2>Đóng góp sau Ads và nội dung</h2><p>Sau phí, quảng cáo và sản xuất video còn lại bao nhiêu?</p><p class="note">Đây là đóng góp của tháng, không phải lợi nhuận ròng hoặc đo lường tác động nhân quả của Ads. Chưa có lương, thuê kho, thuế và toàn bộ OPEX.</p><details><summary>Xem câu lệnh SQL</summary><pre><code>WITH sales AS (
+ SELECT SUBSTR(DATE(order_date),1,7) AS month,SUM(net_sales_vnd) AS net_sales_vnd,SUM(contribution_before_ads_vnd) AS contribution_before_ads_vnd
+ FROM vw_orders_kpi WHERE DATE(order_date)&gt;=&#x27;2026-01-01&#x27; AND DATE(order_date)&lt;&#x27;2026-04-01&#x27; GROUP BY 1
+), ads AS (
+ SELECT SUBSTR(DATE(date),1,7) AS month,SUM(spend_vnd) AS spend_vnd FROM ads_daily
+ WHERE DATE(date)&gt;=&#x27;2026-01-01&#x27; AND DATE(date)&lt;&#x27;2026-04-01&#x27; GROUP BY 1
+), production AS (
+ SELECT SUBSTR(DATE(publish_date),1,7) AS month,SUM(production_cost_vnd) AS production_cost_vnd FROM content
+ WHERE DATE(publish_date)&gt;=&#x27;2026-01-01&#x27; AND DATE(publish_date)&lt;&#x27;2026-04-01&#x27; GROUP BY 1
+)
+SELECT s.*,COALESCE(a.spend_vnd,0) AS spend_vnd,COALESCE(p.production_cost_vnd,0) AS production_cost_vnd,
+ s.contribution_before_ads_vnd-COALESCE(a.spend_vnd,0)-COALESCE(p.production_cost_vnd,0) AS contribution_after_ads_content_vnd
+FROM sales s LEFT JOIN ads a ON a.month=s.month LEFT JOIN production p ON p.month=s.month ORDER BY s.month;</code></pre></details><div class="scroll"><table class="dataframe data">
+  <thead>
+    <tr style="text-align: right;">
+      <th>month</th>
+      <th>net_sales_vnd</th>
+      <th>contribution_before_ads_vnd</th>
+      <th>spend_vnd</th>
+      <th>production_cost_vnd</th>
+      <th>contribution_after_ads_content_vnd</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2026-01</td>
+      <td>1808124000</td>
+      <td>328993120</td>
+      <td>782736000</td>
+      <td>93450000</td>
+      <td>-547192880</td>
+    </tr>
+    <tr>
+      <td>2026-02</td>
+      <td>1638189000</td>
+      <td>294844320</td>
+      <td>768117000</td>
+      <td>82900000</td>
+      <td>-556172680</td>
+    </tr>
+    <tr>
+      <td>2026-03</td>
+      <td>1437588000</td>
+      <td>254680440</td>
+      <td>86924000</td>
+      <td>3350000</td>
+      <td>164406440</td>
+    </tr>
+  </tbody>
+</table></div><p class="muted">Hiển thị 3/3 dòng. Kết quả đầy đủ: results/11_monthly_contribution.csv</p><p><b>Nhận xét: </b>Đóng góp sau Ads và nội dung tháng 1 là −547.192.880 VND; tháng 2 là −556.172.680 VND; tháng 3 là +164.406.440 VND. Tổng quý là −938.959.120 VND.</p></section><section id="12_quality_checks"><span class="label">12 / SQL ANALYSIS</span><h2>Kiểm tra tính toàn vẹn</h2><p>Có khóa ngoại không khớp, task thiếu công hoặc thiếu người phụ trách không?</p><p class="note">UNKNOWN creator và đơn chưa gán video là giới hạn dữ liệu, không tự động là bản ghi phải xóa.</p><details><summary>Xem câu lệnh SQL</summary><pre><code>SELECT &#x27;items_without_order&#x27; AS check_name,COUNT(*) AS affected_rows FROM order_items i LEFT JOIN orders o ON o.order_id=i.order_id WHERE o.order_id IS NULL
+UNION ALL SELECT &#x27;items_without_product&#x27;,COUNT(*) FROM order_items i LEFT JOIN products p ON p.sku=i.sku WHERE p.sku IS NULL
+UNION ALL SELECT &#x27;payments_without_order&#x27;,COUNT(*) FROM payments p LEFT JOIN orders o ON o.order_id=p.order_id WHERE o.order_id IS NULL
+UNION ALL SELECT &#x27;ads_without_video&#x27;,COUNT(*) FROM ads_daily a LEFT JOIN content c ON c.video_id=a.video_id WHERE c.video_id IS NULL
+UNION ALL SELECT &#x27;orders_nonblank_video_unmatched&#x27;,COUNT(*) FROM orders o LEFT JOIN content c ON c.video_id=o.video_id WHERE TRIM(COALESCE(o.video_id,&#x27;&#x27;))&lt;&gt;&#x27;&#x27; AND c.video_id IS NULL
+UNION ALL SELECT &#x27;content_creator_unknown&#x27;,COUNT(*) FROM content WHERE TRIM(COALESCE(creator_id,&#x27;&#x27;)) IN (&#x27;&#x27;,&#x27;UNKNOWN&#x27;)
+UNION ALL SELECT &#x27;orders_without_video_attribution&#x27;,COUNT(*) FROM orders WHERE TRIM(COALESCE(video_id,&#x27;&#x27;))=&#x27;&#x27;
+UNION ALL SELECT &#x27;pack_tasks_without_matching_warehouse_attendance&#x27;,COUNT(*) FROM warehouse_tasks t WHERE t.task_type=&#x27;PACK&#x27; AND NOT EXISTS (SELECT 1 FROM attendance a WHERE a.employee_id=t.employee_id AND DATE(a.date)=DATE(t.date) AND a.warehouse_id=t.warehouse_id AND a.department=&#x27;Kho&#x27;)
+UNION ALL SELECT &#x27;payments_expected_formula_mismatch&#x27;,COUNT(*) FROM payments WHERE expected_payout_vnd&lt;&gt;net_sales_vnd-platform_fee_vnd-shipping_cost_vnd
+UNION ALL SELECT &#x27;orders_without_items&#x27;,COUNT(*) FROM orders o WHERE NOT EXISTS(SELECT 1 FROM order_items i WHERE i.order_id=o.order_id);</code></pre></details><div class="scroll"><table class="dataframe data">
+  <thead>
+    <tr style="text-align: right;">
+      <th>check_name</th>
+      <th>affected_rows</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>items_without_order</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>items_without_product</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>payments_without_order</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>ads_without_video</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>orders_nonblank_video_unmatched</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>content_creator_unknown</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>orders_without_video_attribution</td>
+      <td>5089</td>
+    </tr>
+    <tr>
+      <td>pack_tasks_without_matching_warehouse_attendance</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>payments_expected_formula_mismatch</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <td>orders_without_items</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table></div><p class="muted">Hiển thị 10/10 dòng. Kết quả đầy đủ: results/12_quality_checks.csv</p></section><section><h2>Quy tắc và giới hạn phân tích</h2><ul><li>Đơn hủy: doanh thu và giá vốn bằng 0. Đơn hoàn: hoàn toàn bộ tiền hàng, nhập lại toàn bộ hàng; chi phí giao hàng vẫn phát sinh.</li><li>Doanh thu thuần = số lượng × đơn giá − giảm giá dòng − hoàn tiền dòng, áp dụng đơn không hủy.</li><li>Giá vốn chỉ tính cho đơn completed. Giá vốn của mô hình cố định theo SKU, chưa phải FIFO thực tế.</li><li>Phí sàn và vận chuyển giữ cấp đơn; doanh thu và giá vốn tổng hợp từ dòng hàng trước khi ghép về đơn.</li><li>Ads attributed revenue là chỉ số do nền tảng gán theo cửa sổ 7 ngày click và 1 ngày view, không cộng thêm vào doanh thu nội bộ.</li><li>Chi phí nội dung ghi nhận một lần/video theo publish_date. Nội dung chưa chạy Ads vẫn được tính trong tổng chi phí nội dung.</li><li>Phân tích thanh toán theo cohort đơn Q1, không giới hạn settlement_date vào Q1. Phân tích theo ngày thanh toán sẽ có phạm vi khác.</li><li>Chưa có lý do hủy/hoàn, toàn bộ chi phí vận hành, dữ liệu target hay thiết kế thực nghiệm để kết luận nguyên nhân.</li></ul></section><section><h2>Liên hệ</h2><p><a href="https://hieutran642002.github.io/Portfolio-TranTrungHieu/">Portfolio</a> · <a href="https://www.linkedin.com/in/hieu-tran-ftu/">LinkedIn</a> · <a href="mailto:hieutran642002@gmail.com">Email</a></p></section></main><footer>SQL case study · Trần Trung Hiếu · Dữ liệu mô phỏng / Q1 2026</footer></html>
